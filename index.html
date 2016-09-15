@@ -19,7 +19,6 @@
                         <li class='fragment'>New feature in OpenStack Newton</li>
                         <li class='fragment'>Reload config on SIGHUP</li>
                         <li class='fragment'>Projects + options must be enabled</li>
-                        <li class='fragment'>"Mutable-safe"</li>
                 </section>
                 <section id='good'>
                     <h2>What is it good for?</h2>
@@ -34,16 +33,16 @@
                     <h2>oslo.log</h2>
                     <ul>
                         <li>DEFAULT.debug</li>
-                        <li class='fragment'>DEFAULT.log_config_append</li>
+                        <li class='fragment' data-fragment-index="2" id='lca'>DEFAULT.log_config_append</li>
                     </ul>
-                    <div class='fragment'>
+                    <div class='fragment' data-fragment-index="0">
                         <p>&nbsp;</p>
                         <h2>Nova</h2>
                         <ul>
                             <li>libvirt.live_migration_completion_timeout</li>
                             <li>libvirt.live_migration_progress_timeout</li>
 
-                            <li class='fragment'>More coming in Ocata</li>
+                            <li class='fragment' data-fragment-index="1">More coming in Ocata</li>
                         </ul>
                     </div>
                 </section>
@@ -74,21 +73,24 @@ class: logstash.LogstashFormatterVersion1
 format: nova
 datefmt: nova-compute</code></pre>
                 </section>
+                <section id='turning-it-on'>
+                    <h1>Turning it on</h1>
+                </section>
+                <section id='enabling-project'>
+                    <h2>Enabling a project</h2>
+                    <pre><code class="python" data-trim>
+return service.ProcessLauncher(CONF, restart_method='mutate')
+                    </code></pre>
+                </section>
                 <section>
-                    <section id='enabling'>
-                        <h1>Enabling your project</h1>
-                    </section>
-                    <section id='safe'>
-                        <h2>Safe</h2>
+                    <section id='enabling-options'>
+                        <h2>Enabling options</h2>
+                        <h3>The easy part</h3>
                         <pre><code class="python" data-trim>
-while True:
-    progress_timeout = CONF.libvirt.live_migration_progress_timeout
-    completion_timeout = int(
-        CONF.libvirt.live_migration_completion_timeout * data_gb)
-    if libvirt_migrate.should_abort(
-            instance, now, progress_time,
-            progress_timeout, completion_timeout):
-        guest.abort_job()
+cfg.IntOpt('live_migration_completion_timeout',
+           default=800,
+           mutable=True,
+          ),
                         </code></pre>
                     </section>
                     <section id='cached'>
@@ -98,6 +100,19 @@ progress_timeout = CONF.libvirt.live_migration_progress_timeout
 completion_timeout = int(
     CONF.libvirt.live_migration_completion_timeout * data_gb)
 while True:
+    if libvirt_migrate.should_abort(
+            instance, now, progress_time,
+            progress_timeout, completion_timeout):
+        guest.abort_job()
+                        </code></pre>
+                    </section>
+                    <section id='safe'>
+                        <h2>Safe</h2>
+                        <pre><code class="python" data-trim>
+while True:
+    progress_timeout = CONF.libvirt.live_migration_progress_timeout
+    completion_timeout = int(
+        CONF.libvirt.live_migration_completion_timeout * data_gb)
     if libvirt_migrate.should_abort(
             instance, now, progress_time,
             progress_timeout, completion_timeout):
