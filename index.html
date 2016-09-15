@@ -1,6 +1,6 @@
 <html>
     <head>
-        <title>Eventlet tech talk</title>
+        <title>Mutable Config and You</title>
         <link rel="stylesheet" href="css/reveal.css">
         <link rel="stylesheet" href="css/theme/moon.css">
         <!-- Code highlighting -->
@@ -13,20 +13,113 @@
                     <h1>Mutable Config and You</h1>
                     <h2>Alexis Lee</h2>
                 </section>
-                <section>
-                    <h2>Objectives</h2>
-
+                <section id='what'>
+                    <h2>What is it?</h2>
                     <ul>
-                        <li>What is it?</li>
-                        <li class='fragment'>Current state</li>
-                        <li class='fragment'>Logging</li>
+                        <li class='fragment'>New feature in OpenStack Newton</li>
+                        <li class='fragment'>Reload config on SIGHUP</li>
+                        <li class='fragment'>Projects + options must be enabled</li>
+                        <li class='fragment'>"Mutable-safe"</li>
+                </section>
+                <section id='good'>
+                    <h2>What is it good for?</h2>
+                    <ul>
+                        <li class='fragment'>API uptime</li>
+                        <li class='fragment'>Incremental development</li>
+                        <li class='fragment'>Operational tweaks</li>
+                        <li class='fragment'>Diagnosing faults</li>
                     </ul>
                 </section>
+                <section id='where'>
+                    <h2>oslo.log</h2>
+                    <ul>
+                        <li>DEFAULT.debug</li>
+                        <li class='fragment'>DEFAULT.log_config_append</li>
+                    </ul>
+                    <div class='fragment'>
+                        <p>&nbsp;</p>
+                        <h2>Nova</h2>
+                        <ul>
+                            <li>libvirt.live_migration_completion_timeout</li>
+                            <li>libvirt.live_migration_progress_timeout</li>
+
+                            <li class='fragment'>More coming in Ocata</li>
+                        </ul>
+                    </div>
+                </section>
+                <section id='logging'>
+                    <h2>Logging</h2>
+                    <pre><code style='max-height: 600px'>[loggers]
+keys: root
+
+[handlers]
+keys: logstash
+
+[formatters]
+keys: logstash
+
+[logger_root]
+qualname: root
+handlers: logstash
+level: NOTSET
+
+[handler_logstash]
+class: handlers.WatchedFileHandler
+args: ()
+formatter: logstash
+level: INFO
+
+[formatter_logstash]
+class: logstash.LogstashFormatterVersion1
+format: nova
+datefmt: nova-compute</code></pre>
+                </section>
                 <section>
-                    <section>
+                    <section id='enabling'>
+                        <h1>Enabling your project</h1>
+                    </section>
+                    <section id='safe'>
+                        <h2>Safe</h2>
                         <pre><code class="python" data-trim>
+while True:
+    progress_timeout = CONF.libvirt.live_migration_progress_timeout
+    completion_timeout = int(
+        CONF.libvirt.live_migration_completion_timeout * data_gb)
+    if libvirt_migrate.should_abort(
+            instance, now, progress_time,
+            progress_timeout, completion_timeout):
+        guest.abort_job()
                         </code></pre>
                     </section>
+                    <section id='cached'>
+                        <h2>Cached</h2>
+                        <pre><code class="python" data-trim>
+progress_timeout = CONF.libvirt.live_migration_progress_timeout
+completion_timeout = int(
+    CONF.libvirt.live_migration_completion_timeout * data_gb)
+while True:
+    if libvirt_migrate.should_abort(
+            instance, now, progress_time,
+            progress_timeout, completion_timeout):
+        guest.abort_job()
+                        </code></pre>
+                    </section>
+                    <section id='hooks'>
+                        <h2>Hooks</h2>
+                        <pre><code class="python" data-trim>
+def _mutate_hook(conf, fresh):
+    if (None, 'debug') in fresh:
+        if conf.debug:
+            log_root.setLevel(logging.DEBUG)
+
+def register_options(conf):
+    # ... snip ...
+    conf.register_mutate_hook(_mutate_hook)
+                        </code></pre>
+                    </section>
+                </section>
+                <section>
+                    <h1>Thank you!</h1>
                 </section>
             </div>
         </div>
